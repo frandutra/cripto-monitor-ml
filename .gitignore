@@ -179,3 +179,13 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Datos y modelos
+*.db
+*.sqlite
+/data/
+/models/
+
+# Entorno virtual
+venv/
+.env
