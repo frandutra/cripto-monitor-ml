@@ -6,9 +6,9 @@ import plotly.graph_objects as go
 import os
 
 # Configuración de la página
-st.set_page_config(page_title="Cripto Predictor L1", layout="wide")
+st.set_page_config(page_title="Financial Asset Predictor", layout="wide")
 
-st.title("BTC Real-Time Predictor 🚀")
+st.title("Financial Asset Real-Time Predictor 🚀")
 
 # --- SECCIÓN 1: CARGA DEL MODELO ---
 @st.cache_resource
@@ -29,7 +29,7 @@ if data_pack:
 
     # --- SECCIÓN 2: BARRA LATERAL ---
     st.sidebar.header("Configuración")
-    symbol = st.sidebar.text_input("Ticker de Crypto", value="BTC-USD")
+    symbol = st.sidebar.selectbox("Ticker", ["BTC-USD", "ETH-USD", "SYP", "AAPL"])
     update_button = st.sidebar.button("Actualizar Datos")
 
     # --- SECCIÓN 3: OBTENCIÓN Y LIMPIEZA DE DATOS (Data Engineering) ---
