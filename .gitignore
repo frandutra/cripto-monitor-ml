@@ -189,3 +189,14 @@ cython_debug/
 # Entorno virtual
 venv/
 .env
+__pycache__/
+.DS_Store
+
+# --- AJUSTE PARA NUESTRO BOT ---
+# Ignoramos la base de datos (contiene tus operaciones reales)
+*.db
+*.sqlite
+
+# NO ignoramos la carpeta /models/ completa porque necesitamos el .pkl
+# Pero sí ignoramos cualquier otro archivo temporal que se cree ahí
+!models/crypto_model.pkl

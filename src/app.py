@@ -4,11 +4,29 @@ import joblib
 import yfinance as yf
 import plotly.graph_objects as go
 import os
+import requests
 from database import init_db, save_prediction, get_history
 from streamlit_autorefresh import st_autorefresh
 
-# Configuración
-st.set_page_config(page_title="Crypto Bot v1.0", layout="wide")
+# --- CONFIGURACIÓN DE TELEGRAM ---
+# Ahora el código es genérico y seguro:
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+def send_telegram_alert(message):
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID, 
+            "text": message, 
+            "parse_mode": "Markdown"
+        }
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        st.sidebar.error(f"Error Telegram: {e}")
+
+# Configuración de Streamlit
+st.set_page_config(page_title="Crypto Bot v1.1", layout="wide")
 st.title("Crypto Predictor Bot Autónomo 🤖")
 
 init_db()
@@ -28,9 +46,10 @@ if data_pack:
     model = data_pack['model']
     features = data_pack['features']
 
-    st.sidebar.header("🤖 Configuración del Bot")
-    symbol = st.sidebar.selectbox("Activo a Monitorear", ["BTC-USD", "ETH-USD"])
-    auto_save = st.sidebar.checkbox("Guardado Automático Activo", value=True)
+    st.sidebar.header("🤖 Configuración")
+    symbol = st.sidebar.selectbox("Activo", ["BTC-USD", "ETH-USD", "AAPL", "TSLA"])
+    auto_save = st.sidebar.checkbox("Guardado Automático", value=True)
+    conf_threshold = st.sidebar.slider("Umbral Alerta Telegram (%)", 50, 95, 80, 20)
 
     # 1. Obtención de datos
     df = yf.download(symbol, period="1d", interval="1m")
@@ -40,7 +59,7 @@ if data_pack:
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
 
-        # Cálculo de indicadores para el gráfico
+        # Indicadores
         df['MA_20'] = df['Close'].rolling(window=20).mean()
         df['Close_Lag1'] = df['Close'].shift(1)
         df['Close_Lag2'] = df['Close'].shift(2)
@@ -66,10 +85,10 @@ if data_pack:
                     
                     from database import update_last_result
                     update_last_result(id_pred, exito)
-                    st.toast(f"Resultado actualizado ID {id_pred}: {'✅' if exito else '❌'}")
+                    st.toast(f"Resultado actualizado ID {id_pred}", icon="⚖️")
                     history_df = get_history()
 
-            # --- GUARDADO AUTOMÁTICO ---
+            # --- GUARDADO Y ALERTA TELEGRAM ---
             if auto_save:
                 already_saved = False
                 if not history_df.empty:
@@ -79,56 +98,56 @@ if data_pack:
 
                 if not already_saved:
                     save_prediction(symbol, precio_actual, prediction, confianza)
-                    st.toast(f"✅ Auto-guardado: {symbol}", icon="💾")
+                    st.toast(f"✅ Guardado: {symbol}", icon="💾")
+                    
+                    # ENVIAR TELEGRAM si supera el umbral
+                    if confianza >= conf_threshold:
+                        emoji = "📈" if prediction == 1 else "📉"
+                        txt = "SUBE" if prediction == 1 else "BAJA"
+                        mensaje = (
+                            f"🔔 *NUEVA PREDICCIÓN*\n\n"
+                            f"Activo: `{symbol}`\n"
+                            f"Precio: `${precio_actual:,.2f}`\n"
+                            f"Predicción: *{txt}* {emoji}\n"
+                            f"Confianza: `{confianza:.1f}%`"
+                        )
+                        send_telegram_alert(mensaje)
+                    
                     history_df = get_history()
 
-            # Visualización Superior
+            # Visualización
             c1, c2, c3 = st.columns(3)
             c1.metric("Precio Actual", f"${precio_actual:,.2f}")
-            c2.metric("Refrescos", count)
+            c2.metric("Refresco N°", count)
             c3.metric("Predicción", "SUBE 📈" if prediction == 1 else "BAJA 📉", f"{confianza:.1f}%")
             
-            # Mensaje de éxito/fallo anterior
             if not history_df.empty:
                 ult = history_df.iloc[0]
                 if not pd.isna(ult['result']):
-                    if ult['result'] == 1: st.success(f"🎯 Último acierto en {ult['symbol']}")
-                    else: st.error(f"❌ Último fallo en {ult['symbol']}")
+                    if ult['result'] == 1: st.success(f"🎯 Última predicción: ¡ACIERTO!")
+                    else: st.error(f"❌ Última predicción: FALLO")
 
-            # --- GRÁFICO CON LÍNEA AMARILLA (MA_20) ---
+            # Gráfico
             fig = go.Figure()
-            # Velas
-            fig.add_trace(go.Candlestick(
-                x=df.index, open=df['Open'], high=df['High'],
-                low=df['Low'], close=df['Close'], name="Precio"
-            ))
-            # Línea de tendencia (MA_20)
-            fig.add_trace(go.Scatter(
-                x=df.index, y=df['MA_20'], 
-                line=dict(color='yellow', width=2), 
-                name="Media Móvil 20"
-            ))
-            
-            fig.update_layout(template="plotly_dark", height=450, margin=dict(t=0, b=0), xaxis_rangeslider_visible=False)
+            fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name="Precio"))
+            fig.add_trace(go.Scatter(x=df.index, y=df['MA_20'], line=dict(color='yellow', width=2), name="MA20"))
+            fig.update_layout(template="plotly_dark", height=400, margin=dict(t=0, b=0), xaxis_rangeslider_visible=False)
             st.plotly_chart(fig, use_container_width=True)
 
     # --- SECCIÓN ANALÍTICA ---
     st.write("---")
     if not history_df.empty:
-        # Win Rate Metric
-        if 'result' in history_df.columns and history_df['result'].notnull().any():
-            valid_results = history_df.dropna(subset=['result'])
+        valid_results = history_df.dropna(subset=['result'])
+        if not valid_results.empty:
             win_rate = (valid_results['result'].sum() / len(valid_results)) * 100
-            st.metric("Win Rate del Bot", f"{win_rate:.1f}%")
+            st.metric("Win Rate Histórico", f"{win_rate:.1f}%")
         
         col_a, col_b = st.columns(2)
         with col_a:
-            st.markdown("**Distribución**")
             st.bar_chart(history_df['prediction'].map({1: 'SUBE', 0: 'BAJA'}).value_counts())
         with col_b:
-            st.markdown("**Confianza Histórica**")
             history_df['timestamp'] = pd.to_datetime(history_df['timestamp'])
             st.line_chart(history_df.set_index('timestamp')['confidence'])
         
-        st.subheader("📜 Historial de Operaciones")
+        st.subheader("📜 Historial")
         st.dataframe(history_df.sort_values(by='timestamp', ascending=False), use_container_width=True)
