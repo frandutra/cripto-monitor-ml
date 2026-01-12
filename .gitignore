@@ -200,3 +200,8 @@ __pycache__/
 # NO ignoramos la carpeta /models/ completa porque necesitamos el .pkl
 # Pero sí ignoramos cualquier otro archivo temporal que se cree ahí
 !models/crypto_model.pkl
+
+# NO ignorar la carpeta models
+!models/
+# Pero sí ignorar el contenido dinámico dentro de models
+models/*
