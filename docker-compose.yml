@@ -1,6 +1,25 @@
-version: '3.8'
-
 services:
+  db:
+    image: postgres:15
+    container_name: crypto_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      PGTZ: UTC
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    # Esta línea fuerza a Postgres a aceptar conexiones ignorando el error de TimeZone de Windows
+    command: postgres -c timezone=UTC
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   predictor-bot:
     build: .
     container_name: cripto_bot_final
@@ -10,6 +29,14 @@ services:
       - ./models:/app/models
     env_file:
       - .env
-    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       - PYTHONUNBUFFERED=1
+      - DB_HOST=db
+      - TZ=UTC
+    restart: always
+
+volumes:
+  postgres_data:

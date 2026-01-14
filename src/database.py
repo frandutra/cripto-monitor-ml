@@ -1,57 +1,71 @@
-import sqlite3
-import pandas as pd
+import psycopg2
+from psycopg2 import extras
 import os
-
-DB_PATH = os.path.join('models', 'crypto_history.db')
+import time
 
 def get_connection():
-    """Crea una conexión y un cursor listos para usar."""
-    conn = sqlite3.connect(DB_PATH)
-    return conn, conn.cursor()
+    # Reintento de conexión por si Postgres tarda en arrancar
+    max_retries = 5
+    for i in range(max_retries):
+        try:
+            return psycopg2.connect(
+                dbname=os.getenv("DB_NAME"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASSWORD"),
+                host=os.getenv("DB_HOST"),
+                port=os.getenv("DB_PORT")
+            )
+        except Exception as e:
+            if i < max_retries - 1:
+                time.sleep(2)
+                continue
+            raise e
 
 def init_db():
-    """Inicializa la base de datos y las tablas si no existen."""
-    if not os.path.exists('models'):
-        os.makedirs('models')
-    
-    conn, cursor = get_connection()
-    cursor.execute('''
+    conn = get_connection()
+    cur = conn.cursor()
+    # Sintaxis de Postgres (cambia un poco respecto a SQLite)
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS predictions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            id SERIAL PRIMARY KEY,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             symbol TEXT,
-            entry_price REAL,
+            entry_price FLOAT,
             prediction INTEGER,
-            confidence REAL,
-            result INTEGER  -- 1 para acierto, 0 para fallo, NULL para pendiente
+            confidence FLOAT,
+            result INTEGER
         )
-    ''')
+    """)
     conn.commit()
+    cur.close()
     conn.close()
 
-def save_prediction(symbol, price, pred, conf):
-    """Guarda una nueva predicción."""
-    conn, cursor = get_connection()
-    cursor.execute('''
-        INSERT INTO predictions (symbol, entry_price, prediction, confidence)
-        VALUES (?, ?, ?, ?)
-    ''', (symbol, price, int(pred), float(conf)))
+def save_prediction(symbol, price, prediction, confidence):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO predictions (symbol, entry_price, prediction, confidence) VALUES (%s, %s, %s, %s)",
+        (symbol, price, prediction, confidence)
+    )
     conn.commit()
+    cur.close()
     conn.close()
 
-def update_last_result(prediction_id, result):
-    """Actualiza el resultado de una predicción específica."""
-    conn, cursor = get_connection()
-    cursor.execute('''
-        UPDATE predictions SET result = ? WHERE id = ?
-    ''', (result, prediction_id))
-    conn.commit()
+def get_history(limit=10):
+    conn = get_connection()
+    # Usamos DictCursor para que Streamlit reciba los datos como si fuera un diccionario
+    cur = conn.cursor(cursor_factory=extras.DictCursor)
+    cur.execute("SELECT * FROM predictions ORDER BY timestamp DESC LIMIT %s", (limit,))
+    rows = cur.fetchall()
+    cur.close()
     conn.close()
+    import pandas as pd
+    return pd.DataFrame(rows, columns=['id', 'timestamp', 'symbol', 'entry_price', 'prediction', 'confidence', 'result'])
 
-def get_history():
-    """Recupera todo el historial para mostrarlo en Streamlit."""
-    conn, _ = get_connection()
-    query = "SELECT * FROM predictions ORDER BY timestamp DESC"
-    df = pd.read_sql(query, conn)
+def update_last_result(pred_id, result):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE predictions SET result = %s WHERE id = %s", (result, pred_id))
+    conn.commit()
+    cur.close()
     conn.close()
-    return df

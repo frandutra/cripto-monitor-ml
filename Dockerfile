@@ -1,5 +1,5 @@
 # 1. Cambiamos de 3.9 a 3.10 (o 3.11) para soportar la nueva sintaxis de tipos
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # 2. Directorio de trabajo
 WORKDIR /app
