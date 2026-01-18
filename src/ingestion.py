@@ -22,8 +22,13 @@ if __name__ == "__main__":
     df = fetch_crypto_data()
     if df is not None:
         print(df.head())
-        # Crear carpeta data si no existe
-        os.makedirs('data', exist_ok=True)
+        # Crear carpeta data si no existe (en root del proyecto)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)
+        data_dir = os.path.join(project_root, 'data')
+        os.makedirs(data_dir, exist_ok=True)
+        
         # Guardar para inspeccionar
-        df.to_csv('data/raw_btc_data.csv')
-        print("Archivo guardado en data/raw_btc_data.csv")
+        save_path = os.path.join(data_dir, 'raw_btc_data.csv')
+        df.to_csv(save_path)
+        print(f"Archivo guardado en {save_path}")

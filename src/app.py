@@ -8,6 +8,13 @@ import requests
 from database import init_db, save_prediction, get_history, update_last_result
 from streamlit_autorefresh import st_autorefresh
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file (parent directory of src)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+load_dotenv(os.path.join(project_root, '.env'))
+
 # --- CONFIGURACIÓN DE AMBIENTE ---
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -41,7 +48,7 @@ count = st_autorefresh(interval=60000, key="bot_refresh")
 
 @st.cache_resource
 def load_model():
-    model_path = os.path.join('models', 'crypto_model.pkl')
+    model_path = os.path.join(project_root, 'models', 'crypto_model.pkl')
     if os.path.exists(model_path):
         return joblib.load(model_path)
     return None
@@ -67,12 +74,19 @@ if data_pack:
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
 
-        # Cálculo de Indicadores
+        # Cálculo de Indicadores (Debe coincidir EXACTAMENTE con train_model.py)
         df['MA_20'] = df['Close'].rolling(window=20).mean()
-        df['Close_Lag1'] = df['Close'].shift(1)
-        df['Close_Lag2'] = df['Close'].shift(2)
         
+        # Features Relativos
+        df['Returns_1m'] = df['Close'].pct_change(1)
+        df['Returns_2m'] = df['Close'].pct_change(2)
+        df['Dist_MA_20'] = (df['Close'] - df['MA_20']) / df['MA_20']
+        
+        # Seleccionar features correctos
         last_row = df[features].tail(1)
+        # Reemplazar infinitos o NaNs si ocurren por volatilidad explsiva
+        last_row.replace([float('inf'), float('-inf')], 0, inplace=True)
+        last_row.fillna(0, inplace=True)
         precio_actual = float(df['Close'].iloc[-1])
 
         if not last_row.isnull().values.any():
@@ -172,7 +186,7 @@ if data_pack:
                 display_df.sort_values(by='timestamp', ascending=False),
                 column_config={
                     "entry_price": st.column_config.NumberColumn("Precio Entrada", format="$%.2f"),
-                    "confidence": st.column_config.ProgressColumn("Confianza", min_value=0, max_value=100),
+                    "confidence": st.column_config.ProgressColumn("Confianza", min_value=0, max_value=100, format="%.1f%%"),
                     "timestamp": "Fecha/Hora"
                 },
                 use_container_width=True,
