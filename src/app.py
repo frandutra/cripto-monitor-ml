@@ -53,17 +53,47 @@ def load_model():
         return joblib.load(model_path)
     return None
 
+from ingestion import run_ingestion
+from train_model import train_model
+
+# ... (imports existing)
+
+# ... (load_model func existing)
+
 data_pack = load_model()
+
+# --- SIDEBAR ---
+st.sidebar.header("⚙️ Configuración")
+symbol = st.sidebar.selectbox("Activo", ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD"])
+auto_save = st.sidebar.checkbox("Guardado Automático", value=True)
+conf_threshold = st.sidebar.slider("Umbral Telegram (%)", 50, 95, 80)
+
+st.sidebar.markdown("---")
+if st.sidebar.button("🔄 Actualizar Modelo"):
+    with st.spinner("Descargando nuevos datos y re-entrenando..."):
+        try:
+            # 1. Ingesta
+            if run_ingestion():
+                st.sidebar.success("Datos actualizados.")
+                
+                # 2. Entrenamiento
+                train_model()
+                st.sidebar.success("Modelo re-entrenado.")
+                
+                # 3. Recarga
+                load_model.clear() # Limpiar cache de st
+                st.cache_resource.clear()
+                
+                st.sidebar.success("¡Modelo recargado! 🎉")
+                st.rerun()
+            else:
+                st.sidebar.error("Falló la descarga de datos.")
+        except Exception as e:
+            st.sidebar.error(f"Error: {e}")
 
 if data_pack:
     model = data_pack['model']
     features = data_pack['features']
-
-    # --- SIDEBAR ---
-    st.sidebar.header("⚙️ Configuración")
-    symbol = st.sidebar.selectbox("Activo", ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD"])
-    auto_save = st.sidebar.checkbox("Guardado Automático", value=True)
-    conf_threshold = st.sidebar.slider("Umbral Telegram (%)", 50, 95, 80)
 
     # --- OBTENCIÓN DE DATOS Y ESTADO ---
     df = yf.download(symbol, period="1d", interval="1m", progress=False)
