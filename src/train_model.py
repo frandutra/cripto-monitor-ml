@@ -7,13 +7,14 @@ from sklearn.metrics import classification_report, accuracy_score
 import joblib
 import os
 
-def train_model():
+def train_model(ticker="BTC-USD", interval="5m"):
     # 1. Load Data
-    data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'raw_btc_data.csv')
+    safe_ticker = ticker.replace("-", "_")
+    data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', f'raw_{safe_ticker}_data.csv')
     print(f"Loading data from {data_path}...")
     
     if not os.path.exists(data_path):
-        print("Data file not found!")
+        print(f"Data file not found at {data_path}!")
         return
 
     # Load data
@@ -66,6 +67,10 @@ def train_model():
     # Drop NaNs created by rolling/shifting
     df_ml = df.dropna()
     
+    if df_ml.empty:
+        print("Not enough data to train model.")
+        return
+
     print(f"Data shape after cleaning: {df_ml.shape}")
     print("Class Balance:")
     print(df_ml['Target'].value_counts(normalize=True))
@@ -79,7 +84,7 @@ def train_model():
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
     
     # 4. Train
-    print("Training Random Forest...")
+    print(f"Training Random Forest for {ticker}...")
     model = RandomForestClassifier(n_estimators=100, random_state=42, max_depth=10, min_samples_leaf=5) 
     # Added constraints to prevent overfitting/memorization
     
@@ -93,13 +98,11 @@ def train_model():
     print("\nClassification Report:")
     print(classification_report(y_test, y_pred))
     
-    print("\nSample Probabilities (First 10 of Test Set):")
-    print(y_proba[:10])
-    
     # 6. Save
-    model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models', 'crypto_model.pkl')
-    joblib.dump({'model': model, 'features': features}, model_path)
-    print(f"\nModel saved to {model_path}")
+    model_filename = f'crypto_model_{safe_ticker}.pkl'
+    model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models', model_filename)
+    joblib.dump({'model': model, 'features': features, 'interval': interval, 'ticker': ticker}, model_path)
+    print(f"\nModel saved to {model_path} with training interval: {interval}")
 
 if __name__ == "__main__":
     train_model()

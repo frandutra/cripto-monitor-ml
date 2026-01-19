@@ -17,9 +17,9 @@ def fetch_crypto_data(ticker="BTC-USD", period="60d", interval="5m"):
     
     return data
 
-def run_ingestion():
+def run_ingestion(ticker="BTC-USD", period="60d", interval="5m"):
     # Prueba rápida
-    df = fetch_crypto_data()
+    df = fetch_crypto_data(ticker=ticker, period=period, interval=interval)
     if df is not None:
         print(df.head())
         # Crear carpeta data si no existe (en root del proyecto)
@@ -29,7 +29,8 @@ def run_ingestion():
         os.makedirs(data_dir, exist_ok=True)
         
         # Guardar para inspeccionar
-        save_path = os.path.join(data_dir, 'raw_btc_data.csv')
+        safe_ticker = ticker.replace("-", "_")
+        save_path = os.path.join(data_dir, f'raw_{safe_ticker}_data.csv')
         df.to_csv(save_path)
         print(f"Archivo guardado en {save_path}")
         return True

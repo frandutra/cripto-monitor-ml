@@ -34,8 +34,8 @@ def send_telegram_alert(message):
         st.sidebar.error(f"Error Telegram: {e}")
 
 # --- CONFIGURACIÓN DE UI ---
-st.set_page_config(page_title="Crypto Bot Pro v1.2", layout="wide", page_icon="🤖")
-st.title("Crypto Predictor Bot Autónomo 🤖")
+st.set_page_config(page_title="Crypto Monitor", layout="wide", page_icon="🤖")
+st.title("Crypto Monitor")
 
 # Inicializar DB (Crea tablas si no existen)
 try:
@@ -47,8 +47,10 @@ except Exception as e:
 count = st_autorefresh(interval=60000, key="bot_refresh")
 
 @st.cache_resource
-def load_model():
-    model_path = os.path.join(project_root, 'models', 'crypto_model.pkl')
+def load_model(ticker="BTC-USD"):
+    safe_ticker = ticker.replace("-", "_")
+    model_filename = f'crypto_model_{safe_ticker}.pkl'
+    model_path = os.path.join(project_root, 'models', model_filename)
     if os.path.exists(model_path):
         return joblib.load(model_path)
     return None
@@ -60,11 +62,19 @@ from train_model import train_model
 
 # ... (load_model func existing)
 
-data_pack = load_model()
-
-# --- SIDEBAR ---
+# SIDEBAR se define ANTES de cargar el modelo en esta arquitectura propuesta
 st.sidebar.header("⚙️ Configuración")
-symbol = st.sidebar.selectbox("Activo", ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD"])
+# ... (previous code)
+symbol = st.sidebar.selectbox("Activo", ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "ADA-USD", "XRP-USD"])
+
+data_pack = load_model(symbol)
+training_interval = st.sidebar.selectbox("Intervalo de Entrenamiento", ["1m", "5m", "15m", "1h", "1d"], index=1)
+training_period = st.sidebar.selectbox(
+    "Periodo de Historia", 
+    ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"], 
+    index=2,
+    help="Nota: Yahoo Finance limita la historia para intervalos cortos.\n- '1m' permite máx ~7 días.\n- '5m' permite máx ~60 días.\nPara periodos largos (meses/años) usa intervalos de 1h o 1d."
+)
 auto_save = st.sidebar.checkbox("Guardado Automático", value=True)
 conf_threshold = st.sidebar.slider("Umbral Telegram (%)", 50, 95, 80)
 
@@ -73,12 +83,12 @@ if st.sidebar.button("🔄 Actualizar Modelo"):
     with st.spinner("Descargando nuevos datos y re-entrenando..."):
         try:
             # 1. Ingesta
-            if run_ingestion():
-                st.sidebar.success("Datos actualizados.")
+            if run_ingestion(ticker=symbol, period=training_period, interval=training_interval):
+                st.sidebar.success(f"Datos actualizados ({training_period}).")
                 
                 # 2. Entrenamiento
-                train_model()
-                st.sidebar.success("Modelo re-entrenado.")
+                train_model(ticker=symbol, interval=training_interval)
+                st.sidebar.success(f"Modelo para {symbol} re-entrenado.")
                 
                 # 3. Recarga
                 load_model.clear() # Limpiar cache de st
@@ -94,9 +104,14 @@ if st.sidebar.button("🔄 Actualizar Modelo"):
 if data_pack:
     model = data_pack['model']
     features = data_pack['features']
+    model_interval = data_pack.get('interval', '1m')
 
     # --- OBTENCIÓN DE DATOS Y ESTADO ---
-    df = yf.download(symbol, period="1d", interval="1m", progress=False)
+    # Determinar periodo seguro según intervalo
+    fetch_period = "5d" if model_interval == "1m" else "60d"
+    if model_interval == "1d": fetch_period = "2y" # Necesitamos suficiente historia para MA
+
+    df = yf.download(symbol, period=fetch_period, interval=model_interval, progress=False)
     history_df = get_history()
 
     if not df.empty:
@@ -223,4 +238,4 @@ if data_pack:
                 hide_index=True
             )
 else:
-    st.warning("⚠️ No se encontró el modelo en `models/crypto_model.pkl`. Por favor, entrena el modelo primero.")
+    st.warning(f"⚠️ No se encontró el modelo para {symbol}. Por favor, presiona 'Actualizar Modelo' en el menú lateral para entrenar uno nuevo.")
