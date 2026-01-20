@@ -187,18 +187,15 @@ if data_pack:
             # --- 3. DASHBOARD VISUAL ---
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Precio Actual", f"${precio_actual:,.2f}")
-            c2.metric("Refresco", f"#{count}")
-            
             pred_text = "SUBE 📈" if prediction == 1 else "BAJA 📉"
-            c3.metric("Predicción", pred_text, f"{confianza:.1f}%")
-            
+            c2.metric("Predicción", pred_text, f"{confianza:.1f}%")
             # Cálculo de Win Rate para el header
             if not history_df.empty:
                 valid = history_df.dropna(subset=['result'])
                 if len(valid) > 0:
                     wr = (valid['result'].sum() / len(valid)) * 100
-                    c4.metric("Win Rate", f"{wr:.1f}%", f"{len(valid)} trades")
-
+                    c3.metric("Win Rate", f"{wr:.1f}%", f"{len(valid)} trades")
+            c4.metric("Refresco", f"#{count}")
             # Gráfico de Velas
             fig = go.Figure()
             fig.add_trace(go.Candlestick(
