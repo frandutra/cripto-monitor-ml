@@ -77,3 +77,7 @@ models/*
 
 # 4. Aseguramos que la base de datos de producción NUNCA se suba
 models/crypto_history.db
+
+# --- DATA ---
+data/
+*.csv

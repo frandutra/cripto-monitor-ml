@@ -90,6 +90,17 @@ def train_model(ticker="BTC-USD", interval="5m"):
     
     model.fit(X_train, y_train)
     
+    # --- FEATURE IMPORTANCE (Data Science) ---
+    # Extraemos qué variables influyen más en la decisión del modelo
+    importances = model.feature_importances_
+    feature_imp_df = pd.DataFrame({
+        'Feature': features,
+        'Importance': importances
+    }).sort_values(by='Importance', ascending=False)
+    
+    print("\n[INFO] Feature Importance (Top drivers):")
+    print(feature_imp_df)
+    
     # 5. Evaluate
     y_pred = model.predict(X_test)
     y_proba = model.predict_proba(X_test)
@@ -101,7 +112,16 @@ def train_model(ticker="BTC-USD", interval="5m"):
     # 6. Save
     model_filename = f'crypto_model_{safe_ticker}.pkl'
     model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models', model_filename)
-    joblib.dump({'model': model, 'features': features, 'interval': interval, 'ticker': ticker}, model_path)
+    
+    # Guardamos también la importancia de features para visualizar en la App
+    joblib.dump({
+        'model': model, 
+        'features': features, 
+        'interval': interval, 
+        'ticker': ticker,
+        'feature_importance': feature_imp_df # Nuevo artefacto para explicación
+    }, model_path)
+    
     print(f"\nModel saved to {model_path} with training interval: {interval}")
 
 if __name__ == "__main__":

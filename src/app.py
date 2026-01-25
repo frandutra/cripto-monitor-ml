@@ -196,14 +196,33 @@ if data_pack:
                     wr = (valid['result'].sum() / len(valid)) * 100
                     c3.metric("Win Rate", f"{wr:.1f}%", f"{len(valid)} trades")
             c4.metric("Refresco", f"#{count}")
-            # Gráfico de Velas
+            
+            # Selector de Zoom
+            zoom_period = st.select_slider(
+                "🔎 Zoom del Gráfico (Velas)", 
+                options=[50, 100, 200, 500, 1000, 2000, "Todo"],
+                value=200
+            )
+            
+            # Filtrado de datos para visualización
+            if zoom_period != "Todo":
+                df_display = df.tail(zoom_period)
+            else:
+                df_display = df
+            
             fig = go.Figure()
             fig.add_trace(go.Candlestick(
-                x=df.index, open=df['Open'], high=df['High'], 
-                low=df['Low'], close=df['Close'], name="Precio"
+                x=df_display.index, open=df_display['Open'], high=df_display['High'], 
+                low=df_display['Low'], close=df_display['Close'], name="Precio"
             ))
-            fig.add_trace(go.Scatter(x=df.index, y=df['MA_20'], line=dict(color='yellow', width=2), name="MA20"))
-            fig.update_layout(template="plotly_dark", height=450, margin=dict(t=30, b=10), xaxis_rangeslider_visible=False)
+            fig.add_trace(go.Scatter(x=df_display.index, y=df_display['MA_20'], line=dict(color='yellow', width=2), name="MA20"))
+            fig.update_layout(
+                template="plotly_dark", 
+                height=450, 
+                margin=dict(t=30, b=10), 
+                xaxis_rangeslider_visible=False,
+                title=f"Gráfico {symbol} - {len(df_display)} velas"
+            )
             st.plotly_chart(fig, on_select="rerun")
 
     # --- 4. HISTORIAL Y ANALÍTICA ---
@@ -234,5 +253,42 @@ if data_pack:
                 use_container_width=True,
                 hide_index=True
             )
+
+    # --- 5. DATA SCIENCE: INTERPRETABILIDAD DEL MODELO ---
+    with st.expander("🧠 Explicabilidad del Modelo (Feature Importance)", expanded=False):
+        st.caption("Este análisis muestra qué indicadores técnicos tienen más peso en la decisión del algoritmo.")
+        
+        imp_df = data_pack.get('feature_importance')
+        
+        if imp_df is not None and not imp_df.empty:
+            # Ordenar para visualización estética (Mayor a menor ya viene, pero aseguramos para gráfico)
+            imp_df = imp_df.sort_values(by='Importance', ascending=True)
+            
+            # Gráfico de barras horizontal
+            fig_xai = go.Figure(go.Bar(
+                x=imp_df['Importance'],
+                y=imp_df['Feature'],
+                orientation='h',
+                marker=dict(
+                    color=imp_df['Importance'],
+                    colorscale='Viridis'
+                )
+            ))
+            
+            fig_xai.update_layout(
+                title="Peso de Variables en la Predicción",
+                xaxis_title="Importancia Relativa (0-1)",
+                yaxis_title="Indicador / Feature",
+                template="plotly_dark",
+                height=300,
+                margin=dict(l=0, r=0, t=30, b=0)
+            )
+            st.plotly_chart(fig_xai, use_container_width=True)
+            
+            # Insights generados dinámicamente
+            top_feature = imp_df.iloc[-1]['Feature']
+            st.info(f"💡 **Insight:** El modelo actual depende fuertemente de **{top_feature}**. Esto sugiere que para {symbol}, el comportamiento de {top_feature} es el predictor más fiable.")
+        else:
+            st.warning("⚠️ Este modelo es antiguo y no contiene datos de explicabilidad. Por favor, re-entrena el modelo usando el botón 'Actualizar Modelo' en la barra lateral.")
 else:
     st.warning(f"⚠️ No se encontró el modelo para {symbol}. Por favor, presiona 'Actualizar Modelo' en el menú lateral para entrenar uno nuevo.")
