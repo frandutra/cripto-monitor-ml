@@ -57,6 +57,7 @@ def load_model(ticker="BTC-USD"):
 
 from ingestion import run_ingestion
 from train_model import train_model
+from features import calculate_features
 
 # ... (imports existing)
 
@@ -119,13 +120,8 @@ if data_pack:
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
 
-        # Cálculo de Indicadores (Debe coincidir EXACTAMENTE con train_model.py)
-        df['MA_20'] = df['Close'].rolling(window=20).mean()
-        
-        # Features Relativos
-        df['Returns_1m'] = df['Close'].pct_change(1)
-        df['Returns_2m'] = df['Close'].pct_change(2)
-        df['Dist_MA_20'] = (df['Close'] - df['MA_20']) / df['MA_20']
+        # Cálculo de Indicadores (Centralizado)
+        df = calculate_features(df)
         
         # Seleccionar features correctos
         last_row = df[features].tail(1)
@@ -290,5 +286,7 @@ if data_pack:
             st.info(f"💡 **Insight:** El modelo actual depende fuertemente de **{top_feature}**. Esto sugiere que para {symbol}, el comportamiento de {top_feature} es el predictor más fiable.")
         else:
             st.warning("⚠️ Este modelo es antiguo y no contiene datos de explicabilidad. Por favor, re-entrena el modelo usando el botón 'Actualizar Modelo' en la barra lateral.")
+
+
 else:
     st.warning(f"⚠️ No se encontró el modelo para {symbol}. Por favor, presiona 'Actualizar Modelo' en el menú lateral para entrenar uno nuevo.")

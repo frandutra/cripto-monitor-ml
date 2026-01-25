@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
 import joblib
 import os
+from features import calculate_features
 
 def train_model(ticker="BTC-USD", interval="5m"):
     # 1. Load Data
@@ -45,21 +46,8 @@ def train_model(ticker="BTC-USD", interval="5m"):
     # Sort
     df = df.sort_index()
 
-    # 2. Feature Engineering
-    # Calculate MA_20 if not present
-    if 'MA_20' not in df.columns:
-        df['MA_20'] = df['Close'].rolling(window=20).mean()
-    
-    # RELATIVE FEATURES (Percentage based) - Critical for handling price drift!
-    # 1. 1-minute Return (Momentum)
-    df['Returns_1m'] = df['Close'].pct_change(1)
-    
-    # 2. 2-minute Return (Lagged Momentum)
-    df['Returns_2m'] = df['Close'].pct_change(2)
-    
-    # 3. Distance from Moving Average (Trend Strength/Reversion)
-    # (Price - MA) / MA
-    df['Dist_MA_20'] = (df['Close'] - df['MA_20']) / df['MA_20']
+    # 2. Feature Engineering (Centralized)
+    df = calculate_features(df)
     
     # Target: 1 if Close(t+1) > Close(t)
     df['Target'] = (df['Close'].shift(-1) > df['Close']).astype(int)
@@ -76,7 +64,7 @@ def train_model(ticker="BTC-USD", interval="5m"):
     print(df_ml['Target'].value_counts(normalize=True))
     
     # Update feature list to use ONLY relative metrics
-    features = ['Returns_1m', 'Returns_2m', 'Dist_MA_20']
+    features = ['Returns_1m', 'Returns_2m', 'Dist_MA_20', 'RSI_14', 'BB_Position']
     X = df_ml[features]
     y = df_ml['Target']
     
