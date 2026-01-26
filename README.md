@@ -1,46 +1,80 @@
-# 🤖 Crypto Predictor Bot v1.1
+# 🤖 Crypto Predictor Bot v1.2
 
-Un bot autónomo de predicción de criptomonedas desarrollado con **Python**, **Streamlit** y **Machine Learning**. El sistema descarga datos en tiempo real, genera predicciones de tendencia y envía alertas inteligentes a **Telegram**.
+[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B.svg)](https://streamlit.io/)
+[![Machine Learning](https://img.shields.io/badge/ML-Random%20Forest-orange.svg)](https://scikit-learn.org/)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-blue.svg)](https://www.docker.com/)
 
-## 🚀 Características clave
-* **Predicción en tiempo real:** Análisis minuto a minuto usando `yfinance`.
-* **Visualización Interactiva:** Gráficos de velas (Candlestick) con indicadores de tendencia (MA 20).
-* **Alertas de Telegram:** Notificaciones automáticas cuando la confianza del modelo supera un umbral configurable.
-* **Historial y Win Rate:** Base de datos SQLite integrada para trackear el rendimiento del bot.
-* **Infraestructura Profesional:** Totalmente dockerizado y configurable mediante variables de entorno.
+Un bot autónomo de monitoreo y predicción de criptomonedas desarrollado con un enfoque en **Ingeniería de Datos** y **Machine Learning**. El sistema no solo visualiza el mercado, sino que toma decisiones basadas en patrones técnicos históricos.
 
 ---
 
-## 🛠️ Tecnologías utilizadas
-* **Lenguaje:** Python 3.9+
-* **ML Stack:** Scikit-learn, Pandas, Joblib.
-* **Dashboard:** Streamlit + Plotly.
-* **DevOps:** Docker, Docker Compose.
-* **Base de Datos:** SQLite.
+## 🌟 Características Principales
+
+*   **🔮 Predicción Basada en Clasificación:** Utiliza un modelo de **Random Forest** para predecir si el precio subirá o bajará en el próximo intervalo (ej. 5 min).
+*   **📊 Dashboard en Tiempo Real:** Interfaz profesional con Streamlit y Plotly para seguimiento de trades y métricas de rendimiento.
+*   **🔔 Alertas Inteligentes:** Integración con Telegram Bot API para notificaciones de alta confianza (>80%).
+*   **🧠 Feature Engineering Avanzado:** Cálculo automático de RSI, Bandas de Bollinger, Medias Móviles y retornos logarítmicos.
+*   **🗄️ Persistencia con PostgreSQL:** Almacenamiento robusto de cada predicción y su resultado posterior para cálculo automático de **Win Rate**.
+*   **🐳 Dockerizado:** Despliegue sencillo con Docker Compose (Contenedor de App + Base de Datos).
 
 ---
 
-## 📦 Instalación y Despliegue
+## 🧠 ¿Por qué Random Forest y no Regresión Lineal?
 
-Sigue estos pasos para correr el proyecto localmente usando Docker:
+Para este proyecto elegí **Random Forest Classifier** sobre modelos lineales tradicionales por:
+1.  **No-linealidad:** Los mercados financieros son caóticos. Los árboles de decisión capturan relaciones complejas que una línea recta ignora.
+2.  **Explicabilidad:** El modelo nos permite ver la importancia de cada variable (Feature Importance), ayudándonos a entender qué indicador técnico está "mandando" en el mercado actual.
+3.  **Robustez:** Es menos sensible a valores atípicos (outliers), comunes en la volatilidad de las criptomonedas.
 
-### 1. Clonar el repositorio
-```bash
-git clone [https://github.com/tu-usuario/nombre-de-tu-repo.git](https://github.com/tu-usuario/nombre-de-tu-repo.git)
-cd nombre-de-tu-repo
+---
+
+## 🛠️ Stack Tecnológico
+
+*   **Backend:** Python 3.11
+*   **ML Stack:** Scikit-learn, Pandas, Joblib
+*   **Database:** PostgreSQL
+*   **API:** Yahoo Finance (via `yfinance`)
+*   **Visualización:** Streamlit, Plotly
+*   **Infraestructura:** Docker & Docker Compose
+
+---
+
+## 🚀 Instalación Rápida
+
+### 1. Requisitos Previos
+*   Docker y Docker Compose instalados.
+*   Un Bot de Telegram (puedes crearlo en 1 min con [@BotFather](https://t.me/botfather)).
+
+### 2. Configuración
+Crea un archivo `.env` en la raíz (usa `.env.example` como base):
+```env
+TELEGRAM_TOKEN=tu_token
+TELEGRAM_CHAT_ID=tu_id
+DB_NAME=crypto_monitor
+DB_USER=postgres
+DB_PASSWORD=password
+DB_HOST=db
+DB_PORT=5432
 ```
 
-### 2. Configurar Variables de Entorno
-Crea un archivo .env en la raíz del proyecto (puedes basarte en .env.example):
-
-```bash
-TELEGRAM_TOKEN=tu_token_de_botfather
-TELEGRAM_CHAT_ID=tu_id_de_usuario
-```
-### 3. Levantar con Docker Compose
-
+### 3. Despliegue
 ```bash
 docker-compose up --build -d
 ```
-4. Acceder a la aplicación
-Abre tu navegador y entra en: http://localhost:8501
+Accede a la UI en: `http://localhost:8501`
+
+---
+
+## 📈 Próximos Pasos (Roadmap)
+- [ ] Implementar modelos de Deep Learning (LSTM) para series de tiempo.
+- [ ] Agregar soporte para múltiples exchanges via CCXT.
+- [ ] Sistema de Backtesting avanzado con simulación de comisiones.
+
+---
+
+## 📄 Licencia
+Este proyecto está bajo la Licencia MIT. Siéntete libre de usarlo, mejorarlo y compartirlo.
+
+---
+*Desarrollado con ❤️ para la comunidad de Data Science y Trading.*

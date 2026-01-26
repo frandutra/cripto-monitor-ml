@@ -69,15 +69,14 @@ ENV/
 # 1. NO ignoramos la carpeta models (queremos que Git entre)
 !models/
 
-# 2. Ignoramos TODO el contenido dentro de models por defecto
+# 2. Ignorar modelos específicos pero subir .gitkeep para estructura
 models/*
+!models/.gitkeep
 
-# 3. EXCEPCIÓN: Forzamos la inclusión del cerebro del modelo
-!models/crypto_model.pkl
-
-# 4. Aseguramos que la base de datos de producción NUNCA se suba
-models/crypto_history.db
+# 3. EXCEPCIÓN: Aquí podrías forzar un modelo base si quisieras
+# !models/crypto_model_base.pkl
 
 # --- DATA ---
-data/
+data/*
+!data/.gitkeep
 *.csv
