@@ -287,6 +287,69 @@ if data_pack:
         else:
             st.warning("⚠️ Este modelo es antiguo y no contiene datos de explicabilidad. Por favor, re-entrena el modelo usando el botón 'Actualizar Modelo' en la barra lateral.")
 
+    with st.expander("📊 Estadísticas del Modelo (Validación)", expanded=False):
+        st.markdown("""
+        **Objetivo del Modelo:**
+        Este algoritmo de Machine Learning predice la **dirección** del movimiento del precio (Subida o Bajada) en el próximo intervalo de tiempo. No intenta predecir el valor exacto en dólares, sino la probabilidad de tendencia.
+        """)
+
+        metrics = data_pack.get('metrics')
+        
+        if metrics:
+            m1, m2, m3, m4, m5 = st.columns(5)
+            m1.metric("Accuracy", f"{metrics['accuracy']:.1%}")
+            m2.metric("Precision", f"{metrics['precision']:.1%}")
+            m3.metric("Recall", f"{metrics['recall']:.1%}")
+            m4.metric("F1-Score", f"{metrics['f1']:.2f}")
+            m5.metric("ROC-AUC", f"{metrics['roc_auc']:.2f}")
+
+            st.write("---")
+            col_info, col_cm = st.columns([1, 1])
+
+            with col_info:
+                st.markdown("**Interpretación:**")
+                st.write(f"- **Accuracy:** El modelo acierta la dirección correcta el **{metrics['accuracy']:.1%}** de las veces en total.")
+                st.write(f"- **Precisión (Sube):** Cuando el modelo predice que el precio **SUBE**, acierta el **{metrics['precision']:.1%}** de las veces.")
+                st.write(f"- **Sensibilidad/Recall (Sube):** De todos los movimientos alcistas reales que ocurrieron, el modelo detectó el **{metrics['recall']:.1%}**.")
+                
+                st.caption("""
+                **Información de Validación:**  
+                Los resultados mostrados fueron obtenidos evaluando el modelo con datos históricos que **nunca vio durante su entrenamiento**. 
+                Se utilizó una división temporal estricta (Walk-forward consistency) para asegurar que el modelo no 'prediga el pasado'.
+                """)
+
+            with col_cm:
+                st.markdown("**Matriz de Confusión:**")
+                cm = metrics['confusion_matrix']
+                # cm format: [[TN, FP], [FN, TP]]
+                cm_data = pd.DataFrame(
+                    cm, 
+                    index=["Bajó (Real)", "Subió (Real)"], 
+                    columns=["Predijo BAJA", "Predijo SUBE"]
+                )
+                
+                # Usar un heatmap simple con Plotly
+                fig_cm = go.Figure(data=go.Heatmap(
+                    z=cm,
+                    x=["Predijo BAJA", "Predijo SUBE"],
+                    y=["Bajó (Real)", "Subió (Real)"],
+                    colorscale='Blues',
+                    showscale=False,
+                    text=[[f"Falló: {cm[0][0]}", f"Erró: {cm[0][1]}"], [f"Erró: {cm[1][0]}", f"Acertó: {cm[1][1]}"]],
+                    texttemplate="%{text}",
+                    textfont={"size": 14}
+                ))
+                fig_cm.update_layout(height=250, margin=dict(l=0,r=0,b=0,t=0), template="plotly_dark")
+                st.plotly_chart(fig_cm, use_container_width=True)
+
+        else:
+            st.warning("⚠️ No hay métricas disponibles para este modelo. Por favor, realiza un re-entrenamiento.")
+
+        st.warning("""
+        **⚠️ ADVERTENCIA:** Las predicciones y métricas mostradas son únicamente con fines educativos y de demostración técnica. 
+        El mercado de criptomonedas es altamente volátil y el rendimiento pasado no garantiza resultados futuros. 
+        **Esto no constituye asesoramiento financiero.**
+        """)
 
 else:
     st.warning(f"⚠️ No se encontró el modelo para {symbol}. Por favor, presiona 'Actualizar Modelo' en el menú lateral para entrenar uno nuevo.")

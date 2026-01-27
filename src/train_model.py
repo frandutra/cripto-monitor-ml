@@ -91,9 +91,20 @@ def train_model(ticker="BTC-USD", interval="5m"):
     
     # 5. Evaluate
     y_pred = model.predict(X_test)
-    y_proba = model.predict_proba(X_test)
+    y_proba = model.predict_proba(X_test)[:, 1] # Probability for class 1 (Sube)
     
-    print(f"Accuracy: {accuracy_score(y_test, y_pred):.2f}")
+    from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
+    
+    metrics = {
+        'accuracy': accuracy_score(y_test, y_pred),
+        'precision': precision_score(y_test, y_pred),
+        'recall': recall_score(y_test, y_pred),
+        'f1': f1_score(y_test, y_pred),
+        'roc_auc': roc_auc_score(y_test, y_proba),
+        'confusion_matrix': confusion_matrix(y_test, y_pred).tolist() # Convert to list for serialization
+    }
+    
+    print(f"Accuracy: {metrics['accuracy']:.2f}")
     print("\nClassification Report:")
     print(classification_report(y_test, y_pred))
     
@@ -101,13 +112,14 @@ def train_model(ticker="BTC-USD", interval="5m"):
     model_filename = f'crypto_model_{safe_ticker}.pkl'
     model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models', model_filename)
     
-    # Guardamos también la importancia de features para visualizar en la App
+    # Guardamos también los artefactos para visualizar en la App
     joblib.dump({
         'model': model, 
         'features': features, 
         'interval': interval, 
         'ticker': ticker,
-        'feature_importance': feature_imp_df # Nuevo artefacto para explicación
+        'feature_importance': feature_imp_df,
+        'metrics': metrics # Nuevo artefacto para estadísticas
     }, model_path)
     
     print(f"\nModel saved to {model_path} with training interval: {interval}")

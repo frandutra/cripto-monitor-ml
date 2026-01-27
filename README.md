@@ -13,6 +13,7 @@ Un bot autónomo de monitoreo y predicción de criptomonedas desarrollado con un
 
 *   **🔮 Predicción Basada en Clasificación:** Utiliza un modelo de **Random Forest** para predecir si el precio subirá o bajará en el próximo intervalo (ej. 5 min).
 *   **📊 Dashboard en Tiempo Real:** Interfaz profesional con Streamlit y Plotly para seguimiento de trades y métricas de rendimiento.
+*   **📈 Estadísticas de Validación:** Sección dedicada a métricas de clasificación (Accuracy, Precision, Recall, F1, ROC-AUC) y Matriz de Confusión.
 *   **🔔 Alertas Inteligentes:** Integración con Telegram Bot API para notificaciones de alta confianza (>80%).
 *   **🧠 Feature Engineering Avanzado:** Cálculo automático de RSI, Bandas de Bollinger, Medias Móviles y retornos logarítmicos.
 *   **🗄️ Persistencia con PostgreSQL:** Almacenamiento robusto de cada predicción y su resultado posterior para cálculo automático de **Win Rate**.
